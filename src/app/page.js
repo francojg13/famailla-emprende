@@ -100,7 +100,7 @@ export default async function Home() {
             {/* Badge */}
             <span className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white/90 text-sm font-medium px-4 py-2 rounded-full mb-6">
               <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-              Plataforma local de empleo y eventos
+              Plataforma local de empleo, eventos, emprendedores y profesionales
             </span>
 
             {/* Título principal */}
