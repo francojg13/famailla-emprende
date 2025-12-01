@@ -4,55 +4,102 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-export default function AdminDashboard() {
-  const [stats, setStats] = useState({
-    empleosPendientes: 0,
-    empleosActivos: 0,
-    eventosProximos: 0,
-    articulos: 0,
-  });
+export default function AdminEmpleosPage() {
+  const [empleos, setEmpleos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filtro, setFiltro] = useState("todos"); // todos, pendientes, activos
   const router = useRouter();
 
   useEffect(() => {
-    cargarStats();
+    cargarEmpleos();
   }, []);
 
-  const cargarStats = async () => {
+  const cargarEmpleos = async () => {
     try {
-      const [empleosRes, eventosRes, articulosRes] = await Promise.all([
-        fetch("/api/admin/empleos"),
-        fetch("/api/admin/eventos"),
-        fetch("/api/admin/articulos"),
-      ]);
+      const response = await fetch("/api/admin/empleos");
 
-      if (empleosRes.status === 401) {
+      if (response.status === 401) {
         router.push("/admin");
         return;
       }
 
-      const empleos = await empleosRes.json();
-      const eventos = await eventosRes.json();
-      const articulos = await articulosRes.json();
-
-      const hoy = new Date().toISOString().split("T")[0];
-
-      setStats({
-        empleosPendientes: empleos.filter((e) => !e.activo).length,
-        empleosActivos: empleos.filter((e) => e.activo).length,
-        eventosProximos: eventos.filter((e) => e.fecha >= hoy).length,
-        articulos: articulos.filter((a) => a.publicado).length,
-      });
+      const data = await response.json();
+      setEmpleos(data);
     } catch (error) {
-      console.error("Error cargando stats:", error);
+      console.error("Error cargando empleos:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogout = async () => {
-    await fetch("/api/admin/auth", { method: "DELETE" });
-    router.push("/admin");
+  const toggleActivo = async (empleo) => {
+    try {
+      const response = await fetch("/api/admin/empleos", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: empleo.id, activo: !empleo.activo }),
+      });
+
+      if (response.ok) {
+        setEmpleos(
+          empleos.map((e) =>
+            e.id === empleo.id ? { ...e, activo: !e.activo } : e
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error actualizando empleo:", error);
+    }
+  };
+
+  const toggleDestacado = async (empleo) => {
+    try {
+      const response = await fetch("/api/admin/empleos", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: empleo.id, destacado: !empleo.destacado }),
+      });
+
+      if (response.ok) {
+        setEmpleos(
+          empleos.map((e) =>
+            e.id === empleo.id ? { ...e, destacado: !e.destacado } : e
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error actualizando empleo:", error);
+    }
+  };
+
+  const eliminarEmpleo = async (id) => {
+    if (!confirm("¿Estás seguro de eliminar este empleo?")) return;
+
+    try {
+      const response = await fetch(`/api/admin/empleos?id=${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setEmpleos(empleos.filter((e) => e.id !== id));
+      }
+    } catch (error) {
+      console.error("Error eliminando empleo:", error);
+    }
+  };
+
+  const empleosFiltrados = empleos.filter((e) => {
+    if (filtro === "pendientes") return !e.activo;
+    if (filtro === "activos") return e.activo;
+    return true;
+  });
+
+  const formatearFecha = (fecha) => {
+    return new Date(fecha).toLocaleDateString("es-AR", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
   };
 
   if (loading) {
@@ -68,216 +115,150 @@ export default function AdminDashboard() {
       {/* Header */}
       <header className="bg-white border-b border-stone-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center text-white font-bold">
-              F
-            </div>
-            <div>
-              <h1 className="font-bold text-stone-800">Panel Admin</h1>
-              <p className="text-xs text-stone-500">Famaillá Emprende</p>
-            </div>
-          </div>
-
           <div className="flex items-center gap-4">
-            <a
-              href="/"
-              target="_blank"
-              className="text-sm text-stone-500 hover:text-emerald-600 transition-colors"
+            <Link
+              href="/admin/dashboard"
+              className="text-stone-400 hover:text-stone-600 transition-colors"
             >
-              Ver sitio →
-            </a>
-            <button
-              onClick={handleLogout}
-              className="text-sm text-red-500 hover:text-red-600 font-medium transition-colors"
-            >
-              Cerrar sesión
-            </button>
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <h1 className="font-bold text-stone-800 text-lg">Gestionar Empleos</h1>
           </div>
         </div>
       </header>
 
       {/* Contenido */}
       <main className="max-w-7xl mx-auto px-6 py-8">
-        <h2 className="text-2xl font-bold text-stone-800 mb-6">Dashboard</h2>
+        {/* Filtros */}
+        <div className="flex items-center gap-2 mb-6">
+          <button
+            onClick={() => setFiltro("todos")}
+            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+              filtro === "todos"
+                ? "bg-stone-800 text-white"
+                : "bg-white text-stone-600 hover:bg-stone-50"
+            }`}
+          >
+            Todos ({empleos.length})
+          </button>
+          <button
+            onClick={() => setFiltro("pendientes")}
+            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+              filtro === "pendientes"
+                ? "bg-amber-500 text-white"
+                : "bg-white text-stone-600 hover:bg-stone-50"
+            }`}
+          >
+            Pendientes ({empleos.filter((e) => !e.activo).length})
+          </button>
+          <button
+            onClick={() => setFiltro("activos")}
+            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+              filtro === "activos"
+                ? "bg-emerald-500 text-white"
+                : "bg-white text-stone-600 hover:bg-stone-50"
+            }`}
+          >
+            Activos ({empleos.filter((e) => e.activo).length})
+          </button>
+        </div>
 
-        {/* Stats Cards */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Empleos pendientes */}
-          <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-                <svg
-                  className="w-6 h-6 text-amber-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+        {/* Lista de empleos */}
+        {empleosFiltrados.length > 0 ? (
+          <div className="space-y-4">
+            {empleosFiltrados.map((empleo) => (
+              <div
+                key={empleo.id}
+                className={`bg-white rounded-xl border p-6 ${
+                  empleo.activo ? "border-stone-200" : "border-amber-300 bg-amber-50/50"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    {/* Estado */}
+                    <div className="flex items-center gap-2 mb-2">
+                      {!empleo.activo && (
+                        <span className="bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-1 rounded-full">
+                          Pendiente de revisión
+                        </span>
+                      )}
+                      {empleo.activo && (
+                        <span className="bg-emerald-100 text-emerald-700 text-xs font-semibold px-2 py-1 rounded-full">
+                          Publicado
+                        </span>
+                      )}
+                      {empleo.destacado && (
+                        <span className="bg-purple-100 text-purple-700 text-xs font-semibold px-2 py-1 rounded-full">
+                          ⭐ Destacado
+                        </span>
+                      )}
+                      <span className="text-stone-400 text-xs">
+                        {formatearFecha(empleo.created_at)}
+                      </span>
+                    </div>
+
+                    {/* Título y empresa */}
+                    <h3 className="font-semibold text-stone-800 text-lg">
+                      {empleo.titulo}
+                    </h3>
+                    <p className="text-stone-600">{empleo.empresa}</p>
+                    <p className="text-stone-400 text-sm">{empleo.ubicacion}</p>
+
+                    {/* Descripción */}
+                    {empleo.descripcion && (
+                      <p className="text-stone-500 text-sm mt-2 line-clamp-2">
+                        {empleo.descripcion}
+                      </p>
+                    )}
+
+                    {/* WhatsApp */}
+                    <p className="text-stone-400 text-sm mt-2">
+                      📱 {empleo.whatsapp}
+                    </p>
+                  </div>
+
+                  {/* Acciones */}
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => toggleActivo(empleo)}
+                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                        empleo.activo
+                          ? "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                          : "bg-emerald-500 text-white hover:bg-emerald-600"
+                      }`}
+                    >
+                      {empleo.activo ? "Desactivar" : "Aprobar"}
+                    </button>
+
+                    <button
+                      onClick={() => toggleDestacado(empleo)}
+                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                        empleo.destacado
+                          ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                          : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                      }`}
+                    >
+                      {empleo.destacado ? "Quitar ⭐" : "Destacar ⭐"}
+                    </button>
+
+                    <button
+                      onClick={() => eliminarEmpleo(empleo.id)}
+                      className="px-4 py-2 rounded-lg font-medium text-sm bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
               </div>
-              {stats.empleosPendientes > 0 && (
-                <span className="bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                  ¡Revisar!
-                </span>
-              )}
-            </div>
-            <p className="text-3xl font-bold text-stone-800">{stats.empleosPendientes}</p>
-            <p className="text-stone-500 text-sm">Empleos pendientes</p>
+            ))}
           </div>
-
-          {/* Empleos activos */}
-          <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm">
-            <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mb-4">
-              <svg
-                className="w-6 h-6 text-emerald-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-            <p className="text-3xl font-bold text-stone-800">{stats.empleosActivos}</p>
-            <p className="text-stone-500 text-sm">Empleos activos</p>
+        ) : (
+          <div className="text-center py-12 bg-white rounded-xl border border-stone-200">
+            <p className="text-stone-500">No hay empleos en esta categoría</p>
           </div>
-
-          {/* Eventos próximos */}
-          <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm">
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
-              <svg
-                className="w-6 h-6 text-blue-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-            <p className="text-3xl font-bold text-stone-800">{stats.eventosProximos}</p>
-            <p className="text-stone-500 text-sm">Eventos próximos</p>
-          </div>
-
-          {/* Artículos */}
-          <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm">
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
-              <svg
-                className="w-6 h-6 text-purple-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-                />
-              </svg>
-            </div>
-            <p className="text-3xl font-bold text-stone-800">{stats.articulos}</p>
-            <p className="text-stone-500 text-sm">Artículos publicados</p>
-          </div>
-        </div>
-
-        {/* Accesos rápidos */}
-        <h3 className="text-lg font-semibold text-stone-800 mb-4">Accesos rápidos</h3>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Link
-            href="/admin/empleos"
-            className="group bg-white rounded-xl p-5 border border-stone-200 hover:border-emerald-300 hover:shadow-md transition-all flex items-center gap-4"
-          >
-            <div className="w-12 h-12 bg-emerald-100 group-hover:bg-emerald-200 rounded-xl flex items-center justify-center transition-colors">
-              <svg
-                className="w-6 h-6 text-emerald-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-            <div>
-              <p className="font-semibold text-stone-800 group-hover:text-emerald-700 transition-colors">
-                Gestionar Empleos
-              </p>
-              <p className="text-sm text-stone-500">Moderar y administrar ofertas</p>
-            </div>
-          </Link>
-
-          <Link
-            href="/admin/eventos"
-            className="group bg-white rounded-xl p-5 border border-stone-200 hover:border-blue-300 hover:shadow-md transition-all flex items-center gap-4"
-          >
-            <div className="w-12 h-12 bg-blue-100 group-hover:bg-blue-200 rounded-xl flex items-center justify-center transition-colors">
-              <svg
-                className="w-6 h-6 text-blue-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-            <div>
-              <p className="font-semibold text-stone-800 group-hover:text-blue-700 transition-colors">
-                Gestionar Eventos
-              </p>
-              <p className="text-sm text-stone-500">Crear y editar eventos</p>
-            </div>
-          </Link>
-
-          <Link
-            href="/admin/articulos"
-            className="group bg-white rounded-xl p-5 border border-stone-200 hover:border-purple-300 hover:shadow-md transition-all flex items-center gap-4"
-          >
-            <div className="w-12 h-12 bg-purple-100 group-hover:bg-purple-200 rounded-xl flex items-center justify-center transition-colors">
-              <svg
-                className="w-6 h-6 text-purple-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-                />
-              </svg>
-            </div>
-            <div>
-              <p className="font-semibold text-stone-800 group-hover:text-purple-700 transition-colors">
-                Gestionar Blog
-              </p>
-              <p className="text-sm text-stone-500">Escribir y editar artículos</p>
-            </div>
-          </Link>
-        </div>
+        )}
       </main>
     </div>
   );
