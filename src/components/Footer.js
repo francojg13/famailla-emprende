@@ -29,6 +29,12 @@ export default function Footer() {
             >
               Eventos
             </Link>
+             <Link
+              href="/directorio"
+              className="hover:text-emerald-400 transition-colors"
+            >
+              Directorio
+            </Link>
             <Link
               href="/blog"
               className="hover:text-emerald-400 transition-colors"
