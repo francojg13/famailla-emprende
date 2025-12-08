@@ -3,55 +3,159 @@
 import { useState } from "react";
 import Link from "next/link";
 import Footer from "@/components/Footer";
+import FotoUploader from "@/components/FotoUploader";
+
+// Categorías y puestos predefinidos
+const categoriasPuestos = {
+  "Ventas y Atención": [
+    "Vendedor/a",
+    "Cajero/a",
+    "Promotor/a",
+    "Asesor/a comercial",
+    "Atención al cliente",
+    "Repositor/a",
+  ],
+  "Gastronomía": [
+    "Mozo/a",
+    "Cocinero/a",
+    "Ayudante de cocina",
+    "Bachero/a",
+    "Barista",
+    "Delivery",
+    "Encargado/a de local",
+  ],
+  "Administración": [
+    "Administrativo/a",
+    "Recepcionista",
+    "Secretario/a",
+    "Asistente",
+    "Data entry",
+    "Facturación",
+  ],
+  "Producción y Oficios": [
+    "Operario/a",
+    "Técnico/a",
+    "Electricista",
+    "Mecánico/a",
+    "Soldador/a",
+    "Carpintero/a",
+    "Chofer",
+  ],
+  "Servicios": [
+    "Limpieza",
+    "Seguridad",
+    "Mantenimiento",
+    "Jardinero/a",
+    "Cuidador/a",
+    "Niñera",
+  ],
+  "Profesionales": [
+    "Contador/a",
+    "Abogado/a",
+    "Diseñador/a",
+    "Programador/a",
+    "Marketing",
+    "Recursos Humanos",
+  ],
+  "Salud": [
+    "Enfermero/a",
+    "Cuidador/a de adultos",
+    "Acompañante terapéutico",
+    "Farmacéutico/a",
+  ],
+  "Educación": [
+    "Profesor/a",
+    "Maestro/a",
+    "Instructor/a",
+    "Capacitador/a",
+  ],
+  "Otro": [],
+};
+
+const tiposEmpleo = [
+  "Tiempo completo",
+  "Part-time",
+  "Temporal",
+  "Pasantía",
+  "Freelance",
+];
 
 export default function PublicarEmpleoPage() {
   const [formData, setFormData] = useState({
+    categoria: "",
     titulo: "",
+    tituloPersonalizado: "",
     descripcion: "",
     tipo: "Tiempo completo",
     empresa: "",
     ubicacion: "",
     whatsapp: "",
+    logo_url: "",
   });
 
-  const [estado, setEstado] = useState("idle"); // idle, loading, success, error
+  const [estado, setEstado] = useState("idle");
   const [mensaje, setMensaje] = useState("");
 
-  // Manejar cambios en los inputs
+  // Obtener puestos según categoría seleccionada
+  const puestosDisponibles = formData.categoria
+    ? categoriasPuestos[formData.categoria] || []
+    : [];
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Si cambia la categoría, resetear el título
+    if (name === "categoria") {
+      setFormData((prev) => ({
+        ...prev,
+        categoria: value,
+        titulo: "",
+        tituloPersonalizado: "",
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+  };
+
+  const handleLogoUpload = (url) => {
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      logo_url: url,
     }));
   };
 
-  // Formatear número de WhatsApp (solo números, con código de país)
   const formatearWhatsApp = (numero) => {
-    // Eliminar todo lo que no sea número
     let limpio = numero.replace(/\D/g, "");
-
-    // Si empieza con 0, lo quitamos
     if (limpio.startsWith("0")) {
       limpio = limpio.slice(1);
     }
-
-    // Si no tiene código de país, agregamos 549 (Argentina móvil)
     if (!limpio.startsWith("54")) {
       limpio = "549" + limpio;
     }
-
     return limpio;
   };
 
-  // Enviar formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     setEstado("loading");
     setMensaje("");
 
-    // Validaciones básicas
-    if (!formData.titulo.trim()) {
+    // Validaciones
+    if (!formData.categoria) {
+      setEstado("error");
+      setMensaje("Seleccioná una categoría");
+      return;
+    }
+
+    // Determinar el título final
+    const tituloFinal = formData.titulo === "Otro (especificar)" 
+      ? formData.tituloPersonalizado 
+      : formData.titulo;
+
+    if (!tituloFinal.trim()) {
       setEstado("error");
       setMensaje("El título del puesto es obligatorio");
       return;
@@ -76,8 +180,14 @@ export default function PublicarEmpleoPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...formData,
+          titulo: tituloFinal,
+          categoria: formData.categoria,
+          descripcion: formData.descripcion,
+          tipo: formData.tipo,
+          empresa: formData.empresa,
+          ubicacion: formData.ubicacion,
           whatsapp: formatearWhatsApp(formData.whatsapp),
+          logo_url: formData.logo_url,
         }),
       });
 
@@ -90,14 +200,16 @@ export default function PublicarEmpleoPage() {
       setEstado("success");
       setMensaje("¡Tu empleo fue enviado! Lo revisaremos y publicaremos pronto.");
       
-      // Limpiar formulario
       setFormData({
+        categoria: "",
         titulo: "",
+        tituloPersonalizado: "",
         descripcion: "",
         tipo: "Tiempo completo",
         empresa: "",
         ubicacion: "",
         whatsapp: "",
+        logo_url: "",
       });
     } catch (error) {
       setEstado("error");
@@ -111,12 +223,10 @@ export default function PublicarEmpleoPage() {
           HEADER
           ============================================ */}
       <section className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 text-white py-16 relative overflow-hidden">
-        {/* Formas decorativas */}
         <div className="absolute top-10 right-10 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
         <div className="absolute bottom-5 left-5 w-32 h-32 bg-teal-300/20 rounded-full blur-2xl" />
 
         <div className="relative max-w-6xl mx-auto px-6">
-          {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-emerald-100 text-sm mb-6">
             <Link href="/" className="hover:text-white transition-colors">
               Inicio
@@ -159,9 +269,7 @@ export default function PublicarEmpleoPage() {
               <h2 className="text-xl font-semibold text-emerald-800 mb-2">
                 ¡Empleo enviado!
               </h2>
-              <p className="text-emerald-600 mb-4">
-                {mensaje}
-              </p>
+              <p className="text-emerald-600 mb-4">{mensaje}</p>
               <Link
                 href="/empleos"
                 className="inline-flex items-center gap-2 text-emerald-700 font-semibold hover:text-emerald-800 transition-colors"
@@ -191,22 +299,84 @@ export default function PublicarEmpleoPage() {
                 </div>
               )}
 
-              {/* Título del puesto */}
+              {/* Categoría */}
               <div className="mb-5">
-                <label htmlFor="titulo" className="block text-sm font-semibold text-stone-700 mb-2">
-                  Título del puesto <span className="text-red-500">*</span>
+                <label htmlFor="categoria" className="block text-sm font-semibold text-stone-700 mb-2">
+                  Categoría del puesto <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  id="titulo"
-                  name="titulo"
-                  value={formData.titulo}
+                <select
+                  id="categoria"
+                  name="categoria"
+                  value={formData.categoria}
                   onChange={handleChange}
-                  placeholder="Ej: Vendedor/a para comercio"
-                  className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all placeholder:text-stone-400"
+                  className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all bg-white"
                   required
-                />
+                >
+                  <option value="">Seleccioná una categoría</option>
+                  {Object.keys(categoriasPuestos).map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
               </div>
+
+              {/* Título del puesto */}
+              {formData.categoria && (
+                <div className="mb-5">
+                  <label htmlFor="titulo" className="block text-sm font-semibold text-stone-700 mb-2">
+                    Título del puesto <span className="text-red-500">*</span>
+                  </label>
+                  {puestosDisponibles.length > 0 ? (
+                    <select
+                      id="titulo"
+                      name="titulo"
+                      value={formData.titulo}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all bg-white"
+                      required
+                    >
+                      <option value="">Seleccioná el puesto</option>
+                      {puestosDisponibles.map((puesto) => (
+                        <option key={puesto} value={puesto}>
+                          {puesto}
+                        </option>
+                      ))}
+                      <option value="Otro (especificar)">Otro (especificar)</option>
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      id="titulo"
+                      name="tituloPersonalizado"
+                      value={formData.tituloPersonalizado}
+                      onChange={handleChange}
+                      placeholder="Escribí el título del puesto"
+                      className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all placeholder:text-stone-400"
+                      required
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Campo personalizado si eligió "Otro" */}
+              {formData.titulo === "Otro (especificar)" && (
+                <div className="mb-5">
+                  <label htmlFor="tituloPersonalizado" className="block text-sm font-semibold text-stone-700 mb-2">
+                    Especificá el puesto <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="tituloPersonalizado"
+                    name="tituloPersonalizado"
+                    value={formData.tituloPersonalizado}
+                    onChange={handleChange}
+                    placeholder="Ej: Encargado de depósito"
+                    className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all placeholder:text-stone-400"
+                    required
+                  />
+                </div>
+              )}
 
               {/* Tipo de empleo */}
               <div className="mb-5">
@@ -220,11 +390,11 @@ export default function PublicarEmpleoPage() {
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all bg-white"
                 >
-                  <option value="Tiempo completo">Tiempo completo</option>
-                  <option value="Part-time">Part-time</option>
-                  <option value="Temporal">Temporal</option>
-                  <option value="Pasantía">Pasantía</option>
-                  <option value="Freelance">Freelance</option>
+                  {tiposEmpleo.map((tipo) => (
+                    <option key={tipo} value={tipo}>
+                      {tipo}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -252,6 +422,21 @@ export default function PublicarEmpleoPage() {
               <h2 className="text-2xl font-bold text-stone-800 mb-6">
                 Datos de tu empresa
               </h2>
+
+              {/* Logo */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-stone-700 mb-3">
+                  Logo de la empresa (opcional)
+                </label>
+                <FotoUploader
+                  onUpload={handleLogoUpload}
+                  fotoActual={formData.logo_url}
+                  tipo="logo"
+                />
+                <p className="mt-2 text-xs text-stone-400">
+                  Subí el logo de tu empresa para que tu publicación destaque más.
+                </p>
+              </div>
 
               {/* Nombre de la empresa */}
               <div className="mb-5">
@@ -340,7 +525,6 @@ export default function PublicarEmpleoPage() {
                 )}
               </button>
 
-              {/* Nota sobre moderación */}
               <p className="mt-4 text-center text-xs text-stone-400">
                 Tu empleo será revisado antes de publicarse. 
                 Esto suele demorar menos de 24 horas.
@@ -350,9 +534,6 @@ export default function PublicarEmpleoPage() {
         </div>
       </section>
 
-      {/* ============================================
-          FOOTER
-          ============================================ */}
       <Footer />
     </main>
   );

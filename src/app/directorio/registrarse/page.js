@@ -5,32 +5,168 @@ import Link from "next/link";
 import Footer from "@/components/Footer";
 import FotoUploader from "@/components/FotoUploader";
 
-const categorias = [
-  "Salud",
-  "Construcción",
-  "Diseño",
-  "Hogar",
-  "Gastronomía",
-  "Belleza",
-  "Educación",
-  "Oficios",
-  "Legal",
-  "Otros",
-];
+// ============================================
+// LISTAS PREDEFINIDAS
+// ============================================
+
+// Categorías y profesiones para SERVICIOS
+const categoriasProfesiones = {
+  "Salud": [
+    "Médico/a",
+    "Psicólogo/a",
+    "Odontólogo/a",
+    "Kinesiólogo/a",
+    "Nutricionista",
+    "Enfermero/a",
+    "Veterinario/a",
+    "Fonoaudiólogo/a",
+    "Podólogo/a",
+  ],
+  "Construcción": [
+    "Albañil",
+    "Electricista",
+    "Plomero/a",
+    "Gasista",
+    "Pintor/a",
+    "Herrero/a",
+    "Techista",
+    "Durlock/Yesero",
+    "Vidriero/a",
+    "Ceramista",
+  ],
+  "Hogar": [
+    "Limpieza",
+    "Niñera",
+    "Cuidador/a de adultos",
+    "Jardinero/a",
+    "Fumigador/a",
+    "Técnico en electrodomésticos",
+    "Cerrajero/a",
+  ],
+  "Diseño y Tecnología": [
+    "Diseñador/a Gráfico",
+    "Fotógrafo/a",
+    "Desarrollador Web",
+    "Community Manager",
+    "Editor de Video",
+    "Diseñador/a de Interiores",
+  ],
+  "Educación": [
+    "Profesor/a particular",
+    "Maestro/a",
+    "Instructor/a de manejo",
+    "Profesor/a de música",
+    "Profesor/a de idiomas",
+  ],
+  "Legal y Contable": [
+    "Abogado/a",
+    "Contador/a",
+    "Gestor/a",
+    "Escribano/a",
+    "Despachante de aduanas",
+  ],
+  "Belleza": [
+    "Peluquero/a",
+    "Manicura",
+    "Maquillador/a",
+    "Masajista",
+    "Cosmetólogo/a",
+    "Barbero",
+  ],
+  "Transporte": [
+    "Flete",
+    "Remis",
+    "Delivery",
+    "Traslados médicos",
+  ],
+  "Oficios": [
+    "Mecánico/a",
+    "Tapicero/a",
+    "Modista/Sastre",
+    "Relojero/a",
+    "Zapatero/a",
+    "Carpintero/a",
+    "Soldador/a",
+  ],
+  "Otro": [],
+};
+
+// Categorías y rubros para NEGOCIOS
+const categoriasRubros = {
+  "Gastronomía": [
+    "Panadería",
+    "Rotisería",
+    "Restaurante",
+    "Pizzería",
+    "Heladería",
+    "Repostería/Tortas",
+    "Comidas caseras",
+    "Food truck",
+    "Catering",
+  ],
+  "Comercio": [
+    "Kiosco",
+    "Almacén",
+    "Ferretería",
+    "Bazar",
+    "Librería",
+    "Tienda de ropa",
+    "Zapatería",
+    "Juguetería",
+    "Cotillón",
+  ],
+  "Salud y Belleza": [
+    "Farmacia",
+    "Peluquería",
+    "Barbería",
+    "Spa",
+    "Óptica",
+    "Ortopedia",
+  ],
+  "Servicios": [
+    "Lavadero de autos",
+    "Lavandería",
+    "Imprenta",
+    "Cerrajería",
+    "Taller mecánico",
+    "Gomería",
+  ],
+  "Tecnología": [
+    "Reparación de celulares",
+    "Reparación de PC",
+    "Venta de accesorios",
+    "Cibercafé",
+  ],
+  "Hogar": [
+    "Mueblería",
+    "Colchonería",
+    "Artículos de limpieza",
+    "Vivero",
+    "Corralón",
+  ],
+  "Entretenimiento": [
+    "Salón de fiestas",
+    "Alquiler de inflables",
+    "DJ/Sonido",
+    "Fotografía de eventos",
+  ],
+  "Otro": [],
+};
 
 export default function RegistrarseDirectorioPage() {
   const [formData, setFormData] = useState({
-    tipo: "", // servicio o negocio
-    nombre: "",
-    profesion: "",
+    tipo: "",
     categoria: "",
+    profesion: "",
+    profesionPersonalizada: "",
+    nombre: "",
     descripcion: "",
     experiencia: "",
     horarios: "",
+    sitio_web: "",
     whatsapp: "",
     email: "",
     instagram: "",
-    sitio_web: "",
     direccion: "",
     foto_url: "",
   });
@@ -38,12 +174,46 @@ export default function RegistrarseDirectorioPage() {
   const [estado, setEstado] = useState("idle");
   const [mensaje, setMensaje] = useState("");
 
+  // Obtener lista según tipo seleccionado
+  const categoriasDisponibles = formData.tipo === "servicio" 
+    ? Object.keys(categoriasProfesiones) 
+    : formData.tipo === "negocio" 
+      ? Object.keys(categoriasRubros) 
+      : [];
+
+  const profesionesDisponibles = formData.tipo === "servicio"
+    ? categoriasProfesiones[formData.categoria] || []
+    : formData.tipo === "negocio"
+      ? categoriasRubros[formData.categoria] || []
+      : [];
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+
+    // Si cambia el tipo, resetear categoría y profesión
+    if (name === "tipo") {
+      setFormData((prev) => ({
+        ...prev,
+        tipo: value,
+        categoria: "",
+        profesion: "",
+        profesionPersonalizada: "",
+      }));
+    }
+    // Si cambia la categoría, resetear profesión
+    else if (name === "categoria") {
+      setFormData((prev) => ({
+        ...prev,
+        categoria: value,
+        profesion: "",
+        profesionPersonalizada: "",
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleFotoUpload = (url) => {
@@ -72,19 +242,7 @@ export default function RegistrarseDirectorioPage() {
     // Validaciones
     if (!formData.tipo) {
       setEstado("error");
-      setMensaje("Seleccioná si sos un profesional/servicio o un negocio");
-      return;
-    }
-
-    if (!formData.nombre.trim()) {
-      setEstado("error");
-      setMensaje("El nombre es obligatorio");
-      return;
-    }
-
-    if (!formData.profesion.trim()) {
-      setEstado("error");
-      setMensaje(formData.tipo === "servicio" ? "La profesión es obligatoria" : "El rubro es obligatorio");
+      setMensaje("Seleccioná un tipo (Servicio o Negocio)");
       return;
     }
 
@@ -94,9 +252,30 @@ export default function RegistrarseDirectorioPage() {
       return;
     }
 
+    // Determinar la profesión final
+    const profesionFinal = formData.profesion === "Otro (especificar)"
+      ? formData.profesionPersonalizada
+      : formData.profesion;
+
+    if (!profesionFinal.trim()) {
+      setEstado("error");
+      setMensaje(formData.tipo === "servicio" 
+        ? "Seleccioná o escribí tu profesión" 
+        : "Seleccioná o escribí el rubro de tu negocio");
+      return;
+    }
+
+    if (!formData.nombre.trim()) {
+      setEstado("error");
+      setMensaje(formData.tipo === "servicio" 
+        ? "Tu nombre es obligatorio" 
+        : "El nombre del negocio es obligatorio");
+      return;
+    }
+
     if (!formData.whatsapp.trim()) {
       setEstado("error");
-      setMensaje("El WhatsApp es obligatorio");
+      setMensaje("El número de WhatsApp es obligatorio");
       return;
     }
 
@@ -105,8 +284,19 @@ export default function RegistrarseDirectorioPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
+          tipo: formData.tipo,
+          categoria: formData.categoria,
+          profesion: profesionFinal,
+          nombre: formData.nombre,
+          descripcion: formData.descripcion,
+          experiencia: formData.tipo === "servicio" ? formData.experiencia : null,
+          horarios: formData.tipo === "negocio" ? formData.horarios : null,
+          sitio_web: formData.tipo === "negocio" ? formData.sitio_web : null,
           whatsapp: formatearWhatsApp(formData.whatsapp),
+          email: formData.email,
+          instagram: formData.instagram,
+          direccion: formData.direccion,
+          foto_url: formData.foto_url,
         }),
       });
 
@@ -117,20 +307,21 @@ export default function RegistrarseDirectorioPage() {
       }
 
       setEstado("success");
-      setMensaje("¡Registro enviado! Revisaremos tu perfil y lo publicaremos pronto.");
+      setMensaje("¡Tu registro fue enviado! Lo revisaremos y publicaremos pronto.");
 
       setFormData({
         tipo: "",
-        nombre: "",
-        profesion: "",
         categoria: "",
+        profesion: "",
+        profesionPersonalizada: "",
+        nombre: "",
         descripcion: "",
         experiencia: "",
         horarios: "",
+        sitio_web: "",
         whatsapp: "",
         email: "",
         instagram: "",
-        sitio_web: "",
         direccion: "",
         foto_url: "",
       });
@@ -140,6 +331,9 @@ export default function RegistrarseDirectorioPage() {
     }
   };
 
+  const esServicio = formData.tipo === "servicio";
+  const esNegocio = formData.tipo === "negocio";
+
   return (
     <main className="min-h-screen bg-stone-50">
       {/* ============================================
@@ -147,18 +341,15 @@ export default function RegistrarseDirectorioPage() {
           ============================================ */}
       <section className="bg-gradient-to-br from-indigo-600 via-indigo-500 to-purple-500 text-white py-16 relative overflow-hidden">
         <div className="absolute top-10 right-10 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-5 left-5 w-32 h-32 bg-purple-300/20 rounded-full blur-2xl" />
 
         <div className="relative max-w-6xl mx-auto px-6">
           <nav className="flex items-center gap-2 text-indigo-200 text-sm mb-6">
-            <Link href="/" className="hover:text-white transition-colors">
-              Inicio
-            </Link>
+            <Link href="/" className="hover:text-white transition-colors">Inicio</Link>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-            <Link href="/directorio" className="hover:text-white transition-colors">
-              Directorio
-            </Link>
+            <Link href="/directorio" className="hover:text-white transition-colors">Directorio</Link>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
@@ -166,11 +357,10 @@ export default function RegistrarseDirectorioPage() {
           </nav>
 
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Unite al directorio
+            Registrate en el Directorio
           </h1>
           <p className="text-indigo-100 text-lg max-w-2xl">
-            Registrá tu servicio o negocio y llegá a más clientes en Famaillá.
-            ¡Es gratis!
+            Dá a conocer tu servicio profesional o negocio a toda la comunidad de Famaillá. ¡Es gratis!
           </p>
         </div>
       </section>
@@ -199,7 +389,7 @@ export default function RegistrarseDirectorioPage() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
-                Ver directorio
+                Ver el directorio
               </Link>
             </div>
           )}
@@ -208,11 +398,14 @@ export default function RegistrarseDirectorioPage() {
           {estado !== "success" && (
             <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-stone-200 p-8 shadow-sm">
               
-              {/* ============ TIPO ============ */}
+              {/* ============================================
+                  TIPO DE REGISTRO
+                  ============================================ */}
               <h2 className="text-2xl font-bold text-stone-800 mb-6">
                 ¿Qué querés registrar?
               </h2>
 
+              {/* Mensaje de error */}
               {estado === "error" && (
                 <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
                   <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -223,119 +416,66 @@ export default function RegistrarseDirectorioPage() {
               )}
 
               {/* Selector de tipo */}
-              <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className="grid grid-cols-2 gap-4 mb-6">
                 <button
                   type="button"
-                  onClick={() => setFormData((prev) => ({ ...prev, tipo: "servicio" }))}
+                  onClick={() => handleChange({ target: { name: "tipo", value: "servicio" } })}
                   className={`p-6 rounded-xl border-2 transition-all text-left ${
-                    formData.tipo === "servicio"
-                      ? "border-indigo-500 bg-indigo-50"
+                    esServicio
+                      ? "border-emerald-500 bg-emerald-50"
                       : "border-stone-200 hover:border-stone-300"
                   }`}
                 >
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 ${
-                    formData.tipo === "servicio" ? "bg-indigo-500 text-white" : "bg-stone-100 text-stone-500"
+                    esServicio ? "bg-emerald-500 text-white" : "bg-stone-100 text-stone-500"
                   }`}>
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
-                  <h3 className={`font-semibold mb-1 ${formData.tipo === "servicio" ? "text-indigo-700" : "text-stone-800"}`}>
-                    Profesional / Servicio
+                  <h3 className={`font-semibold mb-1 ${esServicio ? "text-emerald-700" : "text-stone-800"}`}>
+                    Servicio Profesional
                   </h3>
                   <p className="text-sm text-stone-500">
-                    Ofrecés un servicio (electricista, diseñador, médico, etc.)
+                    Electricista, psicólogo, fotógrafo, etc.
                   </p>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setFormData((prev) => ({ ...prev, tipo: "negocio" }))}
+                  onClick={() => handleChange({ target: { name: "tipo", value: "negocio" } })}
                   className={`p-6 rounded-xl border-2 transition-all text-left ${
-                    formData.tipo === "negocio"
-                      ? "border-indigo-500 bg-indigo-50"
+                    esNegocio
+                      ? "border-purple-500 bg-purple-50"
                       : "border-stone-200 hover:border-stone-300"
                   }`}
                 >
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 ${
-                    formData.tipo === "negocio" ? "bg-indigo-500 text-white" : "bg-stone-100 text-stone-500"
+                    esNegocio ? "bg-purple-500 text-white" : "bg-stone-100 text-stone-500"
                   }`}>
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
                   </div>
-                  <h3 className={`font-semibold mb-1 ${formData.tipo === "negocio" ? "text-indigo-700" : "text-stone-800"}`}>
+                  <h3 className={`font-semibold mb-1 ${esNegocio ? "text-purple-700" : "text-stone-800"}`}>
                     Negocio / Emprendimiento
                   </h3>
                   <p className="text-sm text-stone-500">
-                    Tenés un comercio, local o emprendimiento
+                    Panadería, kiosco, taller, etc.
                   </p>
                 </button>
               </div>
 
-              {/* Mostrar resto del form solo si seleccionó tipo */}
+              {/* ============================================
+                  CATEGORÍA Y PROFESIÓN/RUBRO
+                  ============================================ */}
               {formData.tipo && (
                 <>
                   <hr className="my-8 border-stone-200" />
 
-                  {/* ============ FOTO ============ */}
                   <h2 className="text-2xl font-bold text-stone-800 mb-6">
-                    {formData.tipo === "servicio" ? "Tu foto" : "Logo o foto del negocio"}
+                    {esServicio ? "Tu profesión" : "Datos del negocio"}
                   </h2>
-
-                  <div className="mb-8">
-                    <FotoUploader
-                      onUpload={handleFotoUpload}
-                      fotoActual={formData.foto_url}
-                      tipo={formData.tipo === "servicio" ? "perfil" : "logo"}
-                    />
-                    <p className="text-xs text-stone-400 mt-2">
-                      {formData.tipo === "servicio"
-                        ? "Una foto tuya ayuda a generar confianza con los clientes."
-                        : "Subí el logo de tu negocio o una foto del local."}
-                    </p>
-                  </div>
-
-                  <hr className="my-8 border-stone-200" />
-
-                  {/* ============ DATOS PRINCIPALES ============ */}
-                  <h2 className="text-2xl font-bold text-stone-800 mb-6">
-                    {formData.tipo === "servicio" ? "Tus datos" : "Datos del negocio"}
-                  </h2>
-
-                  {/* Nombre */}
-                  <div className="mb-5">
-                    <label htmlFor="nombre" className="block text-sm font-semibold text-stone-700 mb-2">
-                      {formData.tipo === "servicio" ? "Tu nombre completo" : "Nombre del negocio"} <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="nombre"
-                      name="nombre"
-                      value={formData.nombre}
-                      onChange={handleChange}
-                      placeholder={formData.tipo === "servicio" ? "Ej: María García" : "Ej: Panadería Don José"}
-                      className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                      required
-                    />
-                  </div>
-
-                  {/* Profesión/Rubro */}
-                  <div className="mb-5">
-                    <label htmlFor="profesion" className="block text-sm font-semibold text-stone-700 mb-2">
-                      {formData.tipo === "servicio" ? "Profesión / Servicio" : "Rubro / Tipo de negocio"} <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="profesion"
-                      name="profesion"
-                      value={formData.profesion}
-                      onChange={handleChange}
-                      placeholder={formData.tipo === "servicio" ? "Ej: Electricista, Psicóloga, Diseñador" : "Ej: Panadería, Kiosco, Rotisería"}
-                      className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                      required
-                    />
-                  </div>
 
                   {/* Categoría */}
                   <div className="mb-5">
@@ -351,35 +491,134 @@ export default function RegistrarseDirectorioPage() {
                       required
                     >
                       <option value="">Seleccioná una categoría</option>
-                      {categorias.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
+                      {categoriasDisponibles.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* Profesión / Rubro */}
+                  {formData.categoria && (
+                    <div className="mb-5">
+                      <label htmlFor="profesion" className="block text-sm font-semibold text-stone-700 mb-2">
+                        {esServicio ? "Profesión / Servicio" : "Rubro / Tipo de negocio"} <span className="text-red-500">*</span>
+                      </label>
+                      {profesionesDisponibles.length > 0 ? (
+                        <select
+                          id="profesion"
+                          name="profesion"
+                          value={formData.profesion}
+                          onChange={handleChange}
+                          className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-white"
+                          required
+                        >
+                          <option value="">Seleccioná una opción</option>
+                          {profesionesDisponibles.map((prof) => (
+                            <option key={prof} value={prof}>{prof}</option>
+                          ))}
+                          <option value="Otro (especificar)">Otro (especificar)</option>
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          id="profesion"
+                          name="profesionPersonalizada"
+                          value={formData.profesionPersonalizada}
+                          onChange={handleChange}
+                          placeholder={esServicio ? "Ej: Instructor de yoga" : "Ej: Tienda de mascotas"}
+                          className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-stone-400"
+                          required
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Campo personalizado si eligió "Otro" */}
+                  {formData.profesion === "Otro (especificar)" && (
+                    <div className="mb-5">
+                      <label htmlFor="profesionPersonalizada" className="block text-sm font-semibold text-stone-700 mb-2">
+                        Especificá {esServicio ? "tu profesión" : "el rubro"} <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="profesionPersonalizada"
+                        name="profesionPersonalizada"
+                        value={formData.profesionPersonalizada}
+                        onChange={handleChange}
+                        placeholder={esServicio ? "Ej: Instructor de yoga" : "Ej: Tienda de mascotas"}
+                        className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-stone-400"
+                        required
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ============================================
+                  DATOS PERSONALES / DEL NEGOCIO
+                  ============================================ */}
+              {formData.categoria && (
+                <>
+                  <hr className="my-8 border-stone-200" />
+
+                  <h2 className="text-2xl font-bold text-stone-800 mb-6">
+                    {esServicio ? "Tus datos" : "Información del negocio"}
+                  </h2>
+
+                  {/* Foto / Logo */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-semibold text-stone-700 mb-3">
+                      {esServicio ? "Tu foto (opcional)" : "Logo del negocio (opcional)"}
+                    </label>
+                    <FotoUploader
+                      onUpload={handleFotoUpload}
+                      fotoActual={formData.foto_url}
+                      tipo={esServicio ? "perfil" : "logo"}
+                    />
+                    <p className="mt-2 text-xs text-stone-400">
+                      {esServicio 
+                        ? "Una foto profesional genera más confianza." 
+                        : "El logo ayuda a que te reconozcan."}
+                    </p>
+                  </div>
+
+                  {/* Nombre */}
+                  <div className="mb-5">
+                    <label htmlFor="nombre" className="block text-sm font-semibold text-stone-700 mb-2">
+                      {esServicio ? "Tu nombre completo" : "Nombre del negocio"} <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="nombre"
+                      name="nombre"
+                      value={formData.nombre}
+                      onChange={handleChange}
+                      placeholder={esServicio ? "Ej: Juan Pérez" : "Ej: Panadería Don José"}
+                      className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-stone-400"
+                      required
+                    />
                   </div>
 
                   {/* Descripción */}
                   <div className="mb-5">
                     <label htmlFor="descripcion" className="block text-sm font-semibold text-stone-700 mb-2">
-                      Descripción
+                      {esServicio ? "Descripción de tus servicios" : "Descripción del negocio"}
                     </label>
                     <textarea
                       id="descripcion"
                       name="descripcion"
                       value={formData.descripcion}
                       onChange={handleChange}
-                      placeholder={formData.tipo === "servicio" 
-                        ? "Contá qué servicios ofrecés, tu experiencia, especialidades..."
-                        : "Describí tu negocio, qué productos/servicios ofrecés..."
-                      }
+                      placeholder={esServicio 
+                        ? "Contá qué servicios ofrecés, tu experiencia, especialidades..." 
+                        : "Describí tu negocio, qué productos o servicios ofrecés..."}
                       rows={4}
-                      className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
+                      className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-stone-400 resize-none"
                     />
                   </div>
 
-                  {/* Campos condicionales según tipo */}
-                  {formData.tipo === "servicio" ? (
+                  {/* Campo específico: Experiencia (servicio) o Horarios (negocio) */}
+                  {esServicio && (
                     <div className="mb-5">
                       <label htmlFor="experiencia" className="block text-sm font-semibold text-stone-700 mb-2">
                         Años de experiencia
@@ -390,30 +629,48 @@ export default function RegistrarseDirectorioPage() {
                         name="experiencia"
                         value={formData.experiencia}
                         onChange={handleChange}
-                        placeholder="Ej: 5 años, Más de 10 años"
-                        className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-                  ) : (
-                    <div className="mb-5">
-                      <label htmlFor="horarios" className="block text-sm font-semibold text-stone-700 mb-2">
-                        Horarios de atención
-                      </label>
-                      <input
-                        type="text"
-                        id="horarios"
-                        name="horarios"
-                        value={formData.horarios}
-                        onChange={handleChange}
-                        placeholder="Ej: Lunes a Viernes 9:00 - 18:00"
-                        className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                        placeholder="Ej: 5 años"
+                        className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-stone-400"
                       />
                     </div>
                   )}
 
+                  {esNegocio && (
+                    <>
+                      <div className="mb-5">
+                        <label htmlFor="horarios" className="block text-sm font-semibold text-stone-700 mb-2">
+                          Horarios de atención
+                        </label>
+                        <input
+                          type="text"
+                          id="horarios"
+                          name="horarios"
+                          value={formData.horarios}
+                          onChange={handleChange}
+                          placeholder="Ej: Lunes a Viernes 8:00 a 20:00"
+                          className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-stone-400"
+                        />
+                      </div>
+
+                      <div className="mb-5">
+                        <label htmlFor="sitio_web" className="block text-sm font-semibold text-stone-700 mb-2">
+                          Sitio web o link
+                        </label>
+                        <input
+                          type="url"
+                          id="sitio_web"
+                          name="sitio_web"
+                          value={formData.sitio_web}
+                          onChange={handleChange}
+                          placeholder="Ej: https://www.minegocio.com"
+                          className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-stone-400"
+                        />
+                      </div>
+                    </>
+                  )}
+
                   <hr className="my-8 border-stone-200" />
 
-                  {/* ============ CONTACTO ============ */}
                   <h2 className="text-2xl font-bold text-stone-800 mb-6">
                     Contacto
                   </h2>
@@ -436,7 +693,7 @@ export default function RegistrarseDirectorioPage() {
                         value={formData.whatsapp}
                         onChange={handleChange}
                         placeholder="3863 123456"
-                        className="w-full pl-12 pr-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                        className="w-full pl-12 pr-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-stone-400"
                         required
                       />
                     </div>
@@ -445,7 +702,7 @@ export default function RegistrarseDirectorioPage() {
                   {/* Email */}
                   <div className="mb-5">
                     <label htmlFor="email" className="block text-sm font-semibold text-stone-700 mb-2">
-                      Email (opcional)
+                      Email
                     </label>
                     <input
                       type="email"
@@ -454,48 +711,35 @@ export default function RegistrarseDirectorioPage() {
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="tu@email.com"
-                      className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-stone-400"
                     />
                   </div>
 
                   {/* Instagram */}
                   <div className="mb-5">
                     <label htmlFor="instagram" className="block text-sm font-semibold text-stone-700 mb-2">
-                      Instagram (opcional)
+                      Instagram
                     </label>
-                    <input
-                      type="text"
-                      id="instagram"
-                      name="instagram"
-                      value={formData.instagram}
-                      onChange={handleChange}
-                      placeholder="@tu_usuario"
-                      className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                    />
-                  </div>
-
-                  {/* Sitio web (solo para negocios) */}
-                  {formData.tipo === "negocio" && (
-                    <div className="mb-5">
-                      <label htmlFor="sitio_web" className="block text-sm font-semibold text-stone-700 mb-2">
-                        Sitio web (opcional)
-                      </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <span className="text-stone-400">@</span>
+                      </div>
                       <input
-                        type="url"
-                        id="sitio_web"
-                        name="sitio_web"
-                        value={formData.sitio_web}
+                        type="text"
+                        id="instagram"
+                        name="instagram"
+                        value={formData.instagram}
                         onChange={handleChange}
-                        placeholder="https://www.tunegocio.com"
-                        className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                        placeholder="tu_usuario"
+                        className="w-full pl-10 pr-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-stone-400"
                       />
                     </div>
-                  )}
+                  </div>
 
                   {/* Dirección */}
                   <div className="mb-8">
                     <label htmlFor="direccion" className="block text-sm font-semibold text-stone-700 mb-2">
-                      {formData.tipo === "servicio" ? "Zona de trabajo (opcional)" : "Dirección (opcional)"}
+                      Dirección
                     </label>
                     <input
                       type="text"
@@ -503,8 +747,8 @@ export default function RegistrarseDirectorioPage() {
                       name="direccion"
                       value={formData.direccion}
                       onChange={handleChange}
-                      placeholder={formData.tipo === "servicio" ? "Ej: Famaillá y alrededores" : "Ej: Av. San Martín 123, Famaillá"}
-                      className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      placeholder="Ej: Av. San Martín 123, Famaillá"
+                      className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-stone-400"
                     />
                   </div>
 
@@ -512,7 +756,7 @@ export default function RegistrarseDirectorioPage() {
                   <button
                     type="submit"
                     disabled={estado === "loading"}
-                    className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-stone-400 disabled:to-stone-500 text-white font-semibold px-8 py-4 rounded-xl shadow-lg transition-all duration-300"
+                    className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:from-stone-400 disabled:to-stone-500 text-white font-semibold px-8 py-4 rounded-xl shadow-lg shadow-indigo-200/50 hover:shadow-indigo-300/50 disabled:shadow-none transition-all duration-300"
                   >
                     {estado === "loading" ? (
                       <>
@@ -533,7 +777,7 @@ export default function RegistrarseDirectorioPage() {
                   </button>
 
                   <p className="mt-4 text-center text-xs text-stone-400">
-                    Tu perfil será revisado antes de publicarse.
+                    Tu registro será revisado antes de publicarse.
                     Esto suele demorar menos de 24 horas.
                   </p>
                 </>

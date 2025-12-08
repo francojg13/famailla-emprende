@@ -41,20 +41,14 @@ export default function Footer() {
             >
               Blog
             </Link>
-            <Link
-              href="/contacto"
-              className="hover:text-emerald-400 transition-colors"
-            >
-              Contacto
-            </Link>
           </nav>
         </div>
 
         <div className="border-t border-stone-800 mt-8 pt-8 text-center text-sm">
           <p>
-            © {new Date().getFullYear()} Famaillá Emprende. Hecho con 💚 en
-            Tucumán.
+            © {new Date().getFullYear()} Franco Galván. Todos los derechos reservados.
           </p>
+          <p className="font-mono">505 Makers</p>
         </div>
       </div>
     </footer>

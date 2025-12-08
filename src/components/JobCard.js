@@ -1,5 +1,18 @@
 import Link from "next/link";
 
+// Colores por categoría
+const categoriasColores = {
+  "Ventas y Atención": "bg-blue-50 text-blue-700",
+  "Gastronomía": "bg-amber-50 text-amber-700",
+  "Administración": "bg-purple-50 text-purple-700",
+  "Producción y Oficios": "bg-orange-50 text-orange-700",
+  "Servicios": "bg-green-50 text-green-700",
+  "Profesionales": "bg-indigo-50 text-indigo-700",
+  "Salud": "bg-red-50 text-red-700",
+  "Educación": "bg-cyan-50 text-cyan-700",
+  "Otro": "bg-stone-100 text-stone-600",
+};
+
 export default function JobCard({ empleo }) {
   // Construir el link de WhatsApp
   const mensajeEncoded = encodeURIComponent(
@@ -14,14 +27,24 @@ export default function JobCard({ empleo }) {
     month: "short",
   });
 
+  const colorCategoria = categoriasColores[empleo.categoria] || categoriasColores["Otro"];
+
   return (
     <article className="group bg-white rounded-2xl p-6 border border-stone-100 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-100/50 hover:-translate-y-1 transition-all duration-300 flex flex-col">
-      {/* Header: Avatar + Badge */}
+      {/* Header: Avatar/Logo + Badge */}
       <div className="flex items-start justify-between mb-4">
-        {/* Avatar de empresa */}
-        <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-md shadow-emerald-200/50 group-hover:scale-110 transition-transform">
-          {empleo.empresa.charAt(0).toUpperCase()}
-        </div>
+        {/* Logo o Avatar de empresa */}
+        {empleo.logo_url ? (
+          <img
+            src={empleo.logo_url}
+            alt={`Logo de ${empleo.empresa}`}
+            className="w-14 h-14 rounded-xl object-cover shadow-md group-hover:scale-105 transition-transform"
+          />
+        ) : (
+          <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md shadow-emerald-200/50 group-hover:scale-105 transition-transform">
+            {empleo.empresa.charAt(0).toUpperCase()}
+          </div>
+        )}
 
         {/* Badge destacado */}
         {empleo.destacado && (
@@ -34,10 +57,17 @@ export default function JobCard({ empleo }) {
         )}
       </div>
 
-      {/* Tipo de empleo */}
-      <span className="inline-block w-fit bg-emerald-50 text-emerald-700 text-xs font-medium px-3 py-1 rounded-full mb-3">
-        {empleo.tipo}
-      </span>
+      {/* Badges: Categoría + Tipo */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        {empleo.categoria && (
+          <span className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${colorCategoria}`}>
+            {empleo.categoria}
+          </span>
+        )}
+        <span className="inline-block bg-emerald-50 text-emerald-700 text-xs font-medium px-3 py-1 rounded-full">
+          {empleo.tipo}
+        </span>
+      </div>
 
       {/* Título */}
       <h3 className="text-lg font-semibold text-stone-800 mb-2 group-hover:text-emerald-700 transition-colors">
@@ -50,23 +80,25 @@ export default function JobCard({ empleo }) {
       </p>
 
       {/* Ubicación */}
-      <p className="text-stone-400 text-sm flex items-center gap-1 mb-4">
-        <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-          />
-        </svg>
-        {empleo.ubicacion}
-      </p>
+      {empleo.ubicacion && (
+        <p className="text-stone-400 text-sm flex items-center gap-1 mb-4">
+          <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+          </svg>
+          {empleo.ubicacion}
+        </p>
+      )}
 
       {/* Descripción (si existe) */}
       {empleo.descripcion && (
