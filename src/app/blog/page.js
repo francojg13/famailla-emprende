@@ -3,49 +3,100 @@ import ArticleCard from "@/components/ArticleCard";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 
-// Obtener artículos publicados
-async function getArticulos() {
-  const { data, error } = await supabase
+// Obtener artículos con filtros
+async function getArticulos(categoria = null, busqueda = null) {
+  let query = supabase
     .from("articulos")
     .select("id, titulo, slug, extracto, categoria, autor, created_at, imagen_url, imagen_alt, destacado")
-    .eq("publicado", true)
+    .eq("publicado", true);
+
+  // Filtrar por categoría
+  if (categoria) {
+    query = query.eq("categoria", categoria);
+  }
+
+  query = query
     .order("destacado", { ascending: false })
     .order("created_at", { ascending: false });
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error al cargar artículos:", error);
     return [];
   }
 
+  // Filtrar por búsqueda en cliente
+  if (busqueda && data) {
+    const busquedaLower = busqueda.toLowerCase();
+    return data.filter(
+      (articulo) =>
+        articulo.titulo.toLowerCase().includes(busquedaLower) ||
+        (articulo.extracto && articulo.extracto.toLowerCase().includes(busquedaLower)) ||
+        (articulo.autor && articulo.autor.toLowerCase().includes(busquedaLower))
+    );
+  }
+
   return data;
 }
 
-// Obtener categorías únicas
-async function getCategorias() {
+// Obtener conteos por categoría
+async function getConteos() {
   const { data, error } = await supabase
     .from("articulos")
     .select("categoria")
     .eq("publicado", true);
 
   if (error) {
-    console.error("Error al cargar categorías:", error);
-    return [];
+    console.error("Error al cargar conteos:", error);
+    return { categorias: {}, total: 0 };
   }
 
-  // Obtener categorías únicas
-  const categoriasUnicas = [...new Set(data.map((a) => a.categoria))];
-  return categoriasUnicas;
+  const conteo = {};
+  data.forEach((a) => {
+    if (a.categoria) {
+      conteo[a.categoria] = (conteo[a.categoria] || 0) + 1;
+    }
+  });
+
+  return {
+    categorias: conteo,
+    total: data.length,
+  };
 }
 
-export default async function BlogPage() {
-  const [articulos, categorias] = await Promise.all([
-    getArticulos(),
-    getCategorias(),
+export default async function BlogPage({ searchParams }) {
+  const params = await searchParams;
+  const categoriaFiltro = params?.categoria || null;
+  const busqueda = params?.q || null;
+
+  const [articulos, conteos] = await Promise.all([
+    getArticulos(categoriaFiltro, busqueda),
+    getConteos(),
   ]);
+
+  // Obtener lista de categorías ordenadas por cantidad
+  const categoriasOrdenadas = Object.entries(conteos.categorias)
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat]) => cat);
 
   // Separar destacado del resto
   const articuloDestacado = articulos.find((a) => a.destacado);
   const otrosArticulos = articulos.filter((a) => !a.destacado);
+
+  // Construir URL con filtros
+  const buildUrl = (newParams) => {
+    const url = new URLSearchParams();
+
+    const categoria = newParams.categoria !== undefined ? newParams.categoria : categoriaFiltro;
+    const q = newParams.q !== undefined ? newParams.q : busqueda;
+
+    if (categoria) url.set("categoria", categoria);
+    if (q) url.set("q", q);
+
+    const queryString = url.toString();
+    return queryString ? `/blog?${queryString}` : "/blog";
+  };
 
   return (
     <main className="min-h-screen bg-stone-50">
@@ -82,12 +133,37 @@ export default async function BlogPage() {
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Blog para emprendedores
           </h1>
-          <p className="text-stone-300 text-lg max-w-2xl">
-            Artículos, guías y consejos para hacer crecer tu negocio en Famaillá. Agregando cada semana nuevo contenido.
+          <p className="text-stone-300 text-lg max-w-2xl mb-8">
+            Artículos, guías y consejos para hacer crecer tu negocio en Famaillá.
           </p>
 
+          {/* Barra de búsqueda */}
+          <form action="/blog" method="GET" className="max-w-xl">
+            <div className="relative">
+              <input
+                type="text"
+                name="q"
+                defaultValue={busqueda || ""}
+                placeholder="Buscar artículos..."
+                className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 text-white placeholder:text-stone-300 focus:outline-none focus:ring-2 focus:ring-white/50 focus:bg-white/30 transition-all"
+              />
+              <svg
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-300"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              {/* Mantener filtro de categoría */}
+              {categoriaFiltro && (
+                <input type="hidden" name="categoria" value={categoriaFiltro} />
+              )}
+            </div>
+          </form>
+
           {/* Contador de artículos */}
-          <div className="mt-8 inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
+          <div className="mt-6 inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"
@@ -97,7 +173,7 @@ export default async function BlogPage() {
               />
             </svg>
             <span className="text-sm font-medium">
-              {articulos.length} {articulos.length === 1 ? "artículo" : "artículos"}
+              {conteos.total} {conteos.total === 1 ? "artículo publicado" : "artículos publicados"}
             </span>
           </div>
         </div>
@@ -106,22 +182,83 @@ export default async function BlogPage() {
       {/* ============================================
           FILTROS POR CATEGORÍA
           ============================================ */}
-      {categorias.length > 1 && (
-        <section className="py-6 bg-white border-b border-stone-100">
+      {categoriasOrdenadas.length > 0 && (
+        <section className="py-6 bg-white border-b border-stone-100 sticky top-16 z-40">
           <div className="max-w-6xl mx-auto px-6">
-            <div className="flex items-center gap-3 overflow-x-auto pb-2">
-              <span className="text-sm text-stone-500 flex-shrink-0">Categorías:</span>
-              <div className="flex gap-2">
-                {categorias.map((cat) => (
-                  <span
+            <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              <span className="text-sm text-stone-500 flex-shrink-0 font-medium">Categoría:</span>
+              
+              {/* Botón "Todas" */}
+              <Link
+                href={buildUrl({ categoria: null })}
+                className={`inline-block px-4 py-2 rounded-full text-sm font-medium transition-colors flex-shrink-0 ${
+                  !categoriaFiltro
+                    ? "bg-stone-800 text-white"
+                    : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                }`}
+              >
+                Todas ({conteos.total})
+              </Link>
+
+              {/* Categorías */}
+              {categoriasOrdenadas.map((cat) => {
+                const count = conteos.categorias[cat] || 0;
+                return (
+                  <Link
                     key={cat}
-                    className="inline-block px-4 py-1.5 bg-stone-100 hover:bg-emerald-100 text-stone-600 hover:text-emerald-700 text-sm font-medium rounded-full cursor-pointer transition-colors flex-shrink-0"
+                    href={buildUrl({ categoria: cat })}
+                    className={`inline-block px-4 py-2 rounded-full text-sm font-medium transition-colors flex-shrink-0 ${
+                      categoriaFiltro === cat
+                        ? "bg-emerald-600 text-white"
+                        : "bg-stone-100 text-stone-600 hover:bg-emerald-100 hover:text-emerald-700"
+                    }`}
                   >
-                    {cat}
-                  </span>
-                ))}
-              </div>
+                    {cat} ({count})
+                  </Link>
+                );
+              })}
             </div>
+
+            {/* Filtros activos */}
+            {(categoriaFiltro || busqueda) && (
+              <div className="mt-4 flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-stone-500">Filtros activos:</span>
+                
+                {busqueda && (
+                  <Link
+                    href={buildUrl({ q: null })}
+                    className="inline-flex items-center gap-1 bg-stone-200 text-stone-700 text-sm font-medium px-3 py-1 rounded-full hover:bg-stone-300 transition-colors"
+                  >
+                    "{busqueda}"
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </Link>
+                )}
+
+                {categoriaFiltro && (
+                  <Link
+                    href={buildUrl({ categoria: null })}
+                    className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 text-sm font-medium px-3 py-1 rounded-full hover:bg-emerald-200 transition-colors"
+                  >
+                    {categoriaFiltro}
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </Link>
+                )}
+
+                <Link
+                  href="/blog"
+                  className="inline-flex items-center gap-1 bg-red-50 text-red-600 text-sm font-medium px-3 py-1 rounded-full hover:bg-red-100 transition-colors"
+                >
+                  Limpiar todo
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </Link>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -133,17 +270,27 @@ export default async function BlogPage() {
         <div className="max-w-6xl mx-auto px-6">
           {articulos.length > 0 ? (
             <div className="space-y-12">
-              {/* Artículo destacado */}
-              {articuloDestacado && (
+              {/* Título dinámico */}
+              <div>
+                <h2 className="text-2xl font-bold text-stone-800">
+                  {categoriaFiltro ? `Artículos de ${categoriaFiltro}` : "Todos los artículos"}
+                </h2>
+                <p className="text-stone-500 mt-1">
+                  {articulos.length} {articulos.length === 1 ? "artículo encontrado" : "artículos encontrados"}
+                </p>
+              </div>
+
+              {/* Artículo destacado (solo si no hay filtros) */}
+              {articuloDestacado && !categoriaFiltro && !busqueda && (
                 <div className="mb-8">
                   <ArticleCard articulo={articuloDestacado} destacado={true} />
                 </div>
               )}
 
               {/* Grid de artículos */}
-              {otrosArticulos.length > 0 && (
+              {(categoriaFiltro || busqueda ? articulos : otrosArticulos).length > 0 && (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {otrosArticulos.map((articulo) => (
+                  {(categoriaFiltro || busqueda ? articulos : otrosArticulos).map((articulo) => (
                     <ArticleCard key={articulo.id} articulo={articulo} />
                   ))}
                 </div>
@@ -168,20 +315,23 @@ export default async function BlogPage() {
                 </svg>
               </div>
               <h2 className="text-xl font-semibold text-stone-800 mb-2">
-                Próximamente
+                No se encontraron artículos
               </h2>
               <p className="text-stone-500 mb-6 max-w-md mx-auto">
-                Estamos preparando contenido útil para emprendedores.
-                ¡Volvé pronto!
+                {busqueda
+                  ? `No hay resultados para "${busqueda}". Probá con otros términos.`
+                  : categoriaFiltro
+                    ? `No hay artículos en la categoría "${categoriaFiltro}".`
+                    : "Próximamente publicaremos contenido útil para emprendedores."}
               </p>
               <Link
-                href="/"
+                href="/blog"
                 className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-semibold transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
-                Volver al inicio
+                Ver todos los artículos
               </Link>
             </div>
           )}
@@ -189,9 +339,9 @@ export default async function BlogPage() {
       </section>
 
       {/* ============================================
-          CTA NEWSLETTER (Opcional para futuro)
+          CTA NEWSLETTER
           ============================================ */}
-       <section className="py-20 bg-stone-800 text-white relative overflow-hidden">
+      <section className="py-20 bg-stone-800 text-white relative overflow-hidden">
         {/* Patrón decorativo */}
         <div className="absolute inset-0 opacity-5">
           <div
@@ -201,14 +351,14 @@ export default async function BlogPage() {
             }}
           />
         </div>
-          <div className="relative max-w-4xl mx-auto px-6 text-center">
+        <div className="relative max-w-4xl mx-auto px-6 text-center">
           <span className="inline-block bg-emerald-500/20 text-emerald-400 text-sm font-semibold px-4 py-2 rounded-full mb-6">
-            Articulos y novedades
+            Artículos y novedades
           </span>
           <h2 className="text-3xl font-bold mb-4">
             ¿Querés recibir más contenido?
           </h2>
-          <p className="text-emerald-50 text-lg mb-8 max-w-2xl mx-auto">
+          <p className="text-stone-300 text-lg mb-8 max-w-2xl mx-auto">
             Seguinos en redes sociales para estar al día con nuevos artículos,
             eventos y oportunidades para emprendedores.
           </p>
