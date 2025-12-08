@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Footer() {
@@ -7,9 +8,12 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           {/* Logo */}
           <div>
-            <h3 className="text-white font-bold text-xl mb-2">
-              Famaillá Emprende
-            </h3>
+            <Image
+              src="/logo-blanco.svg"
+              alt="Famaillá Conecta"
+              width={150}
+              height={35}
+            />
             <p className="text-sm">
               Conectando talento y oportunidades en nuestra ciudad
             </p>
@@ -48,7 +52,6 @@ export default function Footer() {
           <p>
             © {new Date().getFullYear()} Franco Galván. Todos los derechos reservados.
           </p>
-          <p className="font-mono">505 Makers</p>
         </div>
       </div>
     </footer>

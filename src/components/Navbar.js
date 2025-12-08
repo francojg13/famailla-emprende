@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -13,16 +14,14 @@ export default function Navbar() {
           {/* ============================================
               LOGO
               ============================================ */}
-          <Link href="/" className="flex items-center gap-2 group">
-            {/* Icono/Símbolo */}
-            <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center shadow-md shadow-emerald-200/50 group-hover:shadow-lg group-hover:shadow-emerald-200/70 group-hover:scale-105 transition-all duration-300">
-              <span className="text-white font-bold text-lg">F</span>
-            </div>
-            {/* Texto del logo */}
-            <span className="text-xl font-bold text-stone-800 tracking-tight">
-              Famaillá
-              <span className="text-emerald-600">Emprende</span>
-            </span>
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/logo.svg"
+              alt="Famaillá Conecta"
+              width={180}
+              height={40}
+              priority
+            />
           </Link>
 
           {/* ============================================
@@ -143,13 +142,6 @@ export default function Navbar() {
         >
           <div className="flex flex-col gap-1 pt-2 border-t border-stone-100">
             <Link
-              href="/"
-              onClick={() => setMenuAbierto(false)}
-              className="px-4 py-3 text-stone-600 hover:text-emerald-600 hover:bg-emerald-50 font-medium rounded-lg transition-colors"
-            >
-              Inicio
-            </Link>
-            <Link
               href="/empleos"
               onClick={() => setMenuAbierto(false)}
               className="px-4 py-3 text-stone-600 hover:text-emerald-600 hover:bg-emerald-50 font-medium rounded-lg transition-colors"
@@ -162,6 +154,13 @@ export default function Navbar() {
               className="px-4 py-3 text-stone-600 hover:text-emerald-600 hover:bg-emerald-50 font-medium rounded-lg transition-colors"
             >
               Eventos
+            </Link>
+            <Link
+              href="/directorio"
+              onClick={() => setMenuAbierto(false)}
+              className="px-4 py-3 text-stone-600 hover:text-emerald-600 hover:bg-emerald-50 font-medium rounded-lg transition-colors"
+            >
+              Directorio
             </Link>
             <Link
               href="/blog"
